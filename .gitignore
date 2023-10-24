@@ -1,0 +1,5 @@
+# Pyenv
+.python-version
+
+# Ignore IntelliJ IDEA settings
+.idea/

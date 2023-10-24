@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "distillery"
+version = "0.1.0"
+description = ""
+authors = ["Artem Moskvin <artemm@spotify.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.pytorch-cpu]
+optional = true
+
+[tool.poetry.group.pytorch-cpu.dependencies]
+torch = "^2.2.0.dev20231024+cpu"
+torchaudio = "^2.2.0.dev20231024+cpu"
+torchvision = "^0.17.0.dev20231024+cpu"
+
+[tool.poetry.group.pytorch-cuda118]
+optional = true
+
+[tool.poetry.group.pytorch-cuda118.dependencies]
+torch = "^2.2.0.dev20231024+cu118"
+torchaudio = "^2.2.0.dev20231024+cu118"
+torchvision = "^0.17.0.dev20231024+cu118"
+
+[[tool.poetry.source]]
+name = "pytorch-nightly-cpu"
+url = "https://download.pytorch.org/whl/nightly/cpu"
+priority = "explicit"
+
+
+[[tool.poetry.source]]
+name = "pytorch-nightly-cuda118"
+url = "https://download.pytorch.org/whl/nightly/cu118"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
