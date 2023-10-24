@@ -17,7 +17,7 @@ def distillate(model_name, dataset_name, progress=gr.Progress()):
 
     distilled_model = distillate_(model, tokenizer, dataset, progress)
 
-    distilled_model.save_pretrained(OUTPUT_DIR)
+    distilled_model.model.save_pretrained(OUTPUT_DIR)
 
     return distilled_model.metrics
 
