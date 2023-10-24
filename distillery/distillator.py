@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 import torch
 import transformers
@@ -9,8 +10,10 @@ from distillery.data import preprocess_train_function, preprocess_validation_fun
 from distillery.metrics import compute_metrics, measure_execution_time
 
 
-def distillate(model, tokenizer, dataset):
+def distillate(model, tokenizer, dataset, progress_tracker=None):
     # Step 1. Set up train and val dataset
+    if progress_tracker:
+        progress_tracker(0.1, desc="Preprocessing data")
 
     tokenized_dataset = {
         "train":
@@ -28,6 +31,9 @@ def distillate(model, tokenizer, dataset):
     data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Step 2. Train baseline model
+
+    if progress_tracker:
+        progress_tracker(0.2, desc="Training baseline model (this can take a while)")
 
     training_args = transformers.TrainingArguments(
         "trainer",
@@ -59,6 +65,8 @@ def distillate(model, tokenizer, dataset):
     print("Baseline throughput", baseline_metrics.throughput)
 
     # Step 3. Prune model to be 2:4 sparse
+    if progress_tracker:
+        progress_tracker(0.6, desc="Optimizing model (this can take a while)")
 
     sparsifier = WeightNormSparsifier(
         # apply sparsity to all blocks
@@ -101,7 +109,50 @@ def distillate(model, tokenizer, dataset):
     print(f"Baseline throughput: {baseline_metrics.throughput}")
     print(f"New throughput: {optimized_metrics.throughput}")
 
-    return model
+    batch_size_with_max_diff = find_max_difference_key(baseline_metrics.throughput, optimized_metrics.throughput)
+
+    metrics = [
+        [
+            "base model",
+            round(baseline_metrics.accuracy["f1"], 2),
+            round(baseline_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
+            "n/a"
+        ],
+        [
+            "optimized model",
+            round(optimized_metrics.accuracy["f1"], 2),
+            round(optimized_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
+            "n/a"
+        ],
+        [
+            "delta",
+            round(optimized_metrics.accuracy['f1'] - baseline_metrics.accuracy['f1'], 2),
+            f"{round(baseline_metrics.throughput[batch_size_with_max_diff] / optimized_metrics.throughput[batch_size_with_max_diff], 2)}%",
+            "n/a"
+        ]
+    ]
+
+    return DistillationResult(model, metrics)
+
+
+@dataclass
+class DistillationResult:
+    model: Any
+    metrics: list
+
+
+def find_max_difference_key(dict1, dict2):
+    max_diff = 0.0
+    max_key = None
+
+    for key in dict1.keys():
+        diff = abs(dict1[key] - dict2[key])
+
+        if diff > max_diff:
+            max_diff = diff
+            max_key = key
+
+    return max_key
 
 
 @dataclass
