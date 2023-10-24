@@ -12,7 +12,7 @@ from distillery.metrics import compute_metrics, measure_execution_time
 
 def distillate(model, tokenizer, dataset, progress_tracker=None):
     # Step 1. Set up train and val dataset
-    if progress_tracker:
+    if progress_tracker is not None:
         progress_tracker(0.1, desc="Preprocessing data")
 
     tokenized_dataset = {
@@ -32,7 +32,7 @@ def distillate(model, tokenizer, dataset, progress_tracker=None):
 
     # Step 2. Train baseline model
 
-    if progress_tracker:
+    if progress_tracker is not None:
         progress_tracker(0.2, desc="Training baseline model (this can take a while)")
 
     training_args = transformers.TrainingArguments(
@@ -65,7 +65,7 @@ def distillate(model, tokenizer, dataset, progress_tracker=None):
     print("Baseline throughput", baseline_metrics.throughput)
 
     # Step 3. Prune model to be 2:4 sparse
-    if progress_tracker:
+    if progress_tracker is not None:
         progress_tracker(0.6, desc="Optimizing model (this can take a while)")
 
     sparsifier = WeightNormSparsifier(
