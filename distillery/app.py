@@ -33,4 +33,4 @@ demo = gr.Interface(
     description="A simple tool to optimize your model.",
 )
 
-demo.launch()
+demo.queue(concurrency_count=10).launch()
