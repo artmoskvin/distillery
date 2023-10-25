@@ -53,8 +53,8 @@ demo = gr.Interface(
     ],
     outputs=[
         gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
-        gr.Button(variant="primary", visible=False),
-        gr.Button(variant="secondary", visible=False),
+        gr.Button(variant="primary"),
+        gr.Button(variant="secondary"),
         gr.Markdown()
     ],
     title="Distillery AI",
