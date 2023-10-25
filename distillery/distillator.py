@@ -133,7 +133,7 @@ def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, p
         ]
     ]
 
-    return DistillationResult(model.cpu().float(), metrics)
+    return DistillationResult(model, metrics)
 
 
 @dataclass

@@ -25,7 +25,8 @@ def distillate(model_name, dataset_name, sample, progress=gr.Progress()):
 
     distilled_model = distillate_(model, tokenizer, train_dataset, val_dataset, progress)
 
-    distilled_model.model.save_pretrained(OUTPUT_DIR)
+    # fixme: currently saving fails for sparsed models
+    # distilled_model.model.save_pretrained(OUTPUT_DIR)
 
     return distilled_model.metrics
 
