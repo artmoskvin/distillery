@@ -1,4 +1,5 @@
 import collections
+import os
 
 import evaluate
 import numpy as np
@@ -28,8 +29,8 @@ def compute_metrics(start_logits, end_logits, features, examples):
             end_logit = end_logits[feature_index]
             offsets = features[feature_index]["offset_mapping"]
 
-            start_indexes = np.argsort(start_logit)[-1 : -n_best - 1 : -1].tolist()
-            end_indexes = np.argsort(end_logit)[-1 : -n_best - 1 : -1].tolist()
+            start_indexes = np.argsort(start_logit)[-1: -n_best - 1: -1].tolist()
+            end_indexes = np.argsort(end_logit)[-1: -n_best - 1: -1].tolist()
             for start_index in start_indexes:
                 for end_index in end_indexes:
                     # Skip answers that are not fully in the context
@@ -38,15 +39,15 @@ def compute_metrics(start_logits, end_logits, features, examples):
                     # Skip answers with a length that is either < 0
                     # or > max_answer_length
                     if (
-                        end_index < start_index
-                        or end_index - start_index + 1 > max_answer_length
+                            end_index < start_index
+                            or end_index - start_index + 1 > max_answer_length
                     ):
                         continue
 
                     answer = {
                         "text": context[
-                            offsets[start_index][0] : offsets[end_index][1]
-                        ],
+                                offsets[start_index][0]: offsets[end_index][1]
+                                ],
                         "logit_score": start_logit[start_index] + end_logit[end_index],
                     }
                     answers.append(answer)
@@ -84,3 +85,11 @@ def measure_execution_time(model, batch_sizes, dataset):
             p50 = timer.blocked_autorange().median * 1000
         batch_size_to_time_sec[batch_size] = p50
     return batch_size_to_time_sec
+
+
+def measure_model_size(mdl) -> float:
+    torch.save(mdl.state_dict(), "tmp.pt")
+    model_size_mb = os.path.getsize("tmp.pt") / 1e6
+    print(model_size_mb)
+    os.remove('tmp.pt')
+    return model_size_mb

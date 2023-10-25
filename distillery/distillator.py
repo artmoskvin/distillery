@@ -8,7 +8,7 @@ from torch.ao.pruning import WeightNormSparsifier
 from torch.sparse import to_sparse_semi_structured
 
 from distillery.data import preprocess_train_function, preprocess_validation_function
-from distillery.metrics import compute_metrics, measure_execution_time
+from distillery.metrics import compute_metrics, measure_execution_time, measure_model_size
 
 
 def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, progress_tracker=None):
@@ -109,6 +109,8 @@ def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, p
     print(f"New accuracy: {optimized_metrics.accuracy}")
     print(f"Baseline throughput: {baseline_metrics.throughput}")
     print(f"New throughput: {optimized_metrics.throughput}")
+    print(f"Baseline model size: {baseline_metrics.memory} MB")
+    print(f"New model size: {optimized_metrics.memory} MB")
 
     batch_size_with_max_diff = find_max_difference_key(baseline_metrics.throughput, optimized_metrics.throughput)
 
@@ -117,19 +119,19 @@ def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, p
             "base model",
             round(baseline_metrics.accuracy["f1"], 2),
             round(baseline_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
-            "n/a"
+            round(baseline_metrics.memory, 2)
         ],
         [
             "optimized model",
             round(optimized_metrics.accuracy["f1"], 2),
             round(optimized_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
-            "n/a"
+            round(optimized_metrics.memory, 2)
         ],
         [
             "delta",
             round(optimized_metrics.accuracy['f1'] - baseline_metrics.accuracy['f1'], 2),
             f"{round(baseline_metrics.throughput[batch_size_with_max_diff] / optimized_metrics.throughput[batch_size_with_max_diff], 2)}x",
-            "n/a"
+            round(optimized_metrics.memory - baseline_metrics.memory, 2)
         ]
     ]
 
@@ -160,7 +162,7 @@ def find_max_difference_key(dict1, dict2):
 class Metric:
     accuracy: dict
     throughput: dict
-    memory: str
+    memory: float
 
 
 def get_metrics(val_dataset, model, predictions, tokenized_dataset):
@@ -181,4 +183,6 @@ def get_metrics(val_dataset, model, predictions, tokenized_dataset):
         tokenized_dataset["validation"],
     )
 
-    return Metric(accuracy, throughput, "")
+    size = measure_model_size(model)
+
+    return Metric(accuracy, throughput, size)

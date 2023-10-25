@@ -52,7 +52,7 @@ demo = gr.Interface(
         gr.Checkbox(label="Sample data", info="Select to sample your train and validation datasets")
     ],
     outputs=[
-        gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
+        gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size, mb"], row_count=3, label="Result"),
         gr.Button("Deploy model", variant="primary"),
         gr.Button("Download model", variant="secondary"),
         gr.Markdown()
