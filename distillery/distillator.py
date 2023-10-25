@@ -10,21 +10,21 @@ from distillery.data import preprocess_train_function, preprocess_validation_fun
 from distillery.metrics import compute_metrics, measure_execution_time
 
 
-def distillate(model, tokenizer, dataset, progress_tracker=None):
+def distillate(model, tokenizer, train_dataset, val_dataset, progress_tracker=None):
     # Step 1. Set up train and val dataset
     if progress_tracker is not None:
         progress_tracker(0.1, desc="Preprocessing data")
 
     tokenized_dataset = {
         "train":
-            dataset["train"].map(
+            train_dataset.map(
                 lambda x: preprocess_train_function(x, tokenizer), batched=True
             ),
         "validation":
-            dataset["validation"].map(
+            val_dataset.map(
                 lambda x: preprocess_validation_function(x, tokenizer),
                 batched=True,
-                remove_columns=dataset["train"].column_names,
+                remove_columns=train_dataset.column_names,
             )
     }
 
@@ -59,7 +59,7 @@ def distillate(model, tokenizer, dataset, progress_tracker=None):
         with torch.inference_mode():
             predictions = trainer.predict(tokenized_dataset["validation"])
 
-        baseline_metrics = get_metrics(dataset, model, predictions, tokenized_dataset)
+        baseline_metrics = get_metrics(val_dataset, model, predictions, tokenized_dataset)
 
     print("Baseline accuracy", baseline_metrics.accuracy)
     print("Baseline throughput", baseline_metrics.throughput)
@@ -101,7 +101,7 @@ def distillate(model, tokenizer, dataset, progress_tracker=None):
     with torch.inference_mode():
         predictions = trainer.predict(tokenized_dataset["validation"])
 
-    optimized_metrics = get_metrics(dataset, model, predictions, tokenized_dataset)
+    optimized_metrics = get_metrics(val_dataset, model, predictions, tokenized_dataset)
 
     print("Summary:")
     print(f"Baseline accuracy: {baseline_metrics.accuracy}")
@@ -162,7 +162,7 @@ class Metric:
     memory: str
 
 
-def get_metrics(dataset, model, predictions, tokenized_dataset):
+def get_metrics(val_dataset, model, predictions, tokenized_dataset):
     # batch sizes to compare for eval
     batch_sizes = [4, 16, 64, 256]
     start_logits, end_logits = predictions.predictions
@@ -171,7 +171,7 @@ def get_metrics(dataset, model, predictions, tokenized_dataset):
         start_logits,
         end_logits,
         tokenized_dataset["validation"],
-        dataset["validation"],
+        val_dataset,
     )
 
     throughput = measure_execution_time(
