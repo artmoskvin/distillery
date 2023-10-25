@@ -38,7 +38,7 @@ demo = gr.Interface(
         gr.Dropdown(["squad"], label="Dataset", info="Choose a dataset to use for training and evaluation"),
         gr.Checkbox(label="Sample data", info="Select to sample your train and validation datasets")
     ],
-    outputs=gr.Dataframe(headers=["", "accuracy", "latency", "size"], row_count=3, label="Result"),
+    outputs=gr.Dataframe(headers=["", "accuracy, %", "latency, sec", "size"], row_count=3, label="Result"),
     title="Distillery AI",
     description="A simple tool to optimize your model.",
 )

@@ -128,7 +128,7 @@ def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, p
         [
             "delta",
             round(optimized_metrics.accuracy['f1'] - baseline_metrics.accuracy['f1'], 2),
-            f"{round(baseline_metrics.throughput[batch_size_with_max_diff] / optimized_metrics.throughput[batch_size_with_max_diff], 2)}%",
+            f"{round(baseline_metrics.throughput[batch_size_with_max_diff] / optimized_metrics.throughput[batch_size_with_max_diff], 2)}x",
             "n/a"
         ]
     ]
