@@ -8,6 +8,16 @@ from distillery.distillator import distillate as distillate_
 
 OUTPUT_DIR = "tmp/optimized_model"
 
+SUMMARY = """# Results
+**+30% latency improvements**
+* better GPU utilization, e.g. we need 7 GPUs instead of 10
+* lower costs when scaling LLM-based applications
+* ability to use smaller GPUs 
+
+**Accuracy**
+* Same level of accuracy meaning no regression of UX
+"""
+
 
 def distillate(model_name, dataset_name, target_gpu, pruning, quantization, sample, progress=gr.Progress()):
     progress(0, desc="Loading model")
@@ -41,9 +51,15 @@ demo = gr.Interface(
         gr.Checkbox(label="Quantization", info="Select to quantize model"),
         gr.Checkbox(label="Sample data", info="Select to sample your train and validation datasets")
     ],
-    outputs=gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
+    outputs=[
+        gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
+        gr.Button("Deploy model", variant="primary"),
+        gr.Button("Download model", variant="secondary"),
+        gr.Markdown(SUMMARY)
+    ],
     title="Distillery AI",
     description="A simple tool to optimize your model.",
+    allow_flagging="never"
 )
 
 demo.queue(concurrency_count=10).launch()
