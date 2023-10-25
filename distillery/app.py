@@ -9,7 +9,7 @@ from distillery.distillator import distillate as distillate_
 OUTPUT_DIR = "tmp/optimized_model"
 
 
-def distillate(model_name, dataset_name, target_gpu, sample, progress=gr.Progress()):
+def distillate(model_name, dataset_name, target_gpu, pruning, quantization, sample, progress=gr.Progress()):
     progress(0, desc="Loading model")
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
     model = transformers.AutoModelForQuestionAnswering.from_pretrained(model_name)
@@ -37,6 +37,8 @@ demo = gr.Interface(
         gr.Dropdown(["bert-base-cased"], label="Model", info="Choose a base model to optimize"),
         gr.Dropdown(["squad"], label="Dataset", info="Choose a dataset to use for training and evaluation"),
         gr.Dropdown(["RTX 4090", "A100", "H100"], label="Target GPU", info="Choose target GPU to optimize for"),
+        gr.Checkbox(label="Pruning", info="Select to prune model"),
+        gr.Checkbox(label="Quantization", info="Select to quantize model"),
         gr.Checkbox(label="Sample data", info="Select to sample your train and validation datasets")
     ],
     outputs=gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
