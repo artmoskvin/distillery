@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from typing import Any
 
 import torch
 import transformers
+from datasets import Dataset
 from torch.ao.pruning import WeightNormSparsifier
 from torch.sparse import to_sparse_semi_structured
 
@@ -9,25 +11,30 @@ from distillery.data import preprocess_train_function, preprocess_validation_fun
 from distillery.metrics import compute_metrics, measure_execution_time
 
 
-def distillate(model, tokenizer, dataset):
+def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, progress_tracker=None):
     # Step 1. Set up train and val dataset
+    if progress_tracker is not None:
+        progress_tracker(0.1, desc="Preprocessing data")
 
     tokenized_dataset = {
         "train":
-            dataset["train"].map(
+            train_dataset.map(
                 lambda x: preprocess_train_function(x, tokenizer), batched=True
             ),
         "validation":
-            dataset["validation"].map(
+            val_dataset.map(
                 lambda x: preprocess_validation_function(x, tokenizer),
                 batched=True,
-                remove_columns=dataset["train"].column_names,
+                remove_columns=train_dataset.column_names,
             )
     }
 
     data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Step 2. Train baseline model
+
+    if progress_tracker is not None:
+        progress_tracker(0.2, desc="Training baseline model (this can take a while)")
 
     training_args = transformers.TrainingArguments(
         "trainer",
@@ -53,12 +60,14 @@ def distillate(model, tokenizer, dataset):
         with torch.inference_mode():
             predictions = trainer.predict(tokenized_dataset["validation"])
 
-        baseline_metrics = get_metrics(dataset, model, predictions, tokenized_dataset)
+        baseline_metrics = get_metrics(val_dataset, model, predictions, tokenized_dataset)
 
     print("Baseline accuracy", baseline_metrics.accuracy)
     print("Baseline throughput", baseline_metrics.throughput)
 
     # Step 3. Prune model to be 2:4 sparse
+    if progress_tracker is not None:
+        progress_tracker(0.6, desc="Optimizing model (this can take a while)")
 
     sparsifier = WeightNormSparsifier(
         # apply sparsity to all blocks
@@ -93,7 +102,7 @@ def distillate(model, tokenizer, dataset):
     with torch.inference_mode():
         predictions = trainer.predict(tokenized_dataset["validation"])
 
-    optimized_metrics = get_metrics(dataset, model, predictions, tokenized_dataset)
+    optimized_metrics = get_metrics(val_dataset, model, predictions, tokenized_dataset)
 
     print("Summary:")
     print(f"Baseline accuracy: {baseline_metrics.accuracy}")
@@ -101,7 +110,50 @@ def distillate(model, tokenizer, dataset):
     print(f"Baseline throughput: {baseline_metrics.throughput}")
     print(f"New throughput: {optimized_metrics.throughput}")
 
-    return model
+    batch_size_with_max_diff = find_max_difference_key(baseline_metrics.throughput, optimized_metrics.throughput)
+
+    metrics = [
+        [
+            "base model",
+            round(baseline_metrics.accuracy["f1"], 2),
+            round(baseline_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
+            "n/a"
+        ],
+        [
+            "optimized model",
+            round(optimized_metrics.accuracy["f1"], 2),
+            round(optimized_metrics.throughput[batch_size_with_max_diff] / batch_size_with_max_diff, 2),
+            "n/a"
+        ],
+        [
+            "delta",
+            round(optimized_metrics.accuracy['f1'] - baseline_metrics.accuracy['f1'], 2),
+            f"{round(baseline_metrics.throughput[batch_size_with_max_diff] / optimized_metrics.throughput[batch_size_with_max_diff], 2)}x",
+            "n/a"
+        ]
+    ]
+
+    return DistillationResult(model, metrics)
+
+
+@dataclass
+class DistillationResult:
+    model: Any
+    metrics: list
+
+
+def find_max_difference_key(dict1, dict2):
+    max_diff = 0.0
+    max_key = None
+
+    for key in dict1.keys():
+        diff = abs(dict1[key] - dict2[key])
+
+        if diff > max_diff:
+            max_diff = diff
+            max_key = key
+
+    return max_key
 
 
 @dataclass
@@ -111,7 +163,7 @@ class Metric:
     memory: str
 
 
-def get_metrics(dataset, model, predictions, tokenized_dataset):
+def get_metrics(val_dataset, model, predictions, tokenized_dataset):
     # batch sizes to compare for eval
     batch_sizes = [4, 16, 64, 256]
     start_logits, end_logits = predictions.predictions
@@ -120,7 +172,7 @@ def get_metrics(dataset, model, predictions, tokenized_dataset):
         start_logits,
         end_logits,
         tokenized_dataset["validation"],
-        dataset["validation"],
+        val_dataset,
     )
 
     throughput = measure_execution_time(
