@@ -9,7 +9,7 @@ from distillery.distillator import distillate as distillate_
 OUTPUT_DIR = "tmp/optimized_model"
 
 SUMMARY = """# Results
-**+30% latency improvements**
+**+30% latency improvements and 3x lower memory usage**
 * better GPU utilization, e.g. we need 7 GPUs instead of 10
 * lower costs when scaling LLM-based applications
 * ability to use smaller GPUs 
