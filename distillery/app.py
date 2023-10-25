@@ -1,6 +1,8 @@
 import datasets
 import gradio as gr
 import transformers
+from datasets import Dataset
+
 from distillery.distillator import distillate as distillate_
 
 
@@ -14,12 +16,12 @@ def distillate(model_name, dataset_name, sample, progress=gr.Progress()):
 
     progress(0.05, desc="Loading dataset")
     dataset = datasets.load_dataset(dataset_name)
-    train_dataset = dataset["train"]
-    val_dataset = dataset["validation"]
+    train_dataset: Dataset = dataset["train"]
+    val_dataset: Dataset = dataset["validation"]
 
     if sample:
-        train_dataset = train_dataset[:100]
-        val_dataset = val_dataset[:20]
+        train_dataset = train_dataset.select(range(100))
+        val_dataset = val_dataset.select(range(20))
 
     distilled_model = distillate_(model, tokenizer, train_dataset, val_dataset, progress)
 

@@ -3,6 +3,7 @@ from typing import Any
 
 import torch
 import transformers
+from datasets import Dataset
 from torch.ao.pruning import WeightNormSparsifier
 from torch.sparse import to_sparse_semi_structured
 
@@ -10,7 +11,7 @@ from distillery.data import preprocess_train_function, preprocess_validation_fun
 from distillery.metrics import compute_metrics, measure_execution_time
 
 
-def distillate(model, tokenizer, train_dataset, val_dataset, progress_tracker=None):
+def distillate(model, tokenizer, train_dataset: Dataset, val_dataset: Dataset, progress_tracker=None):
     # Step 1. Set up train and val dataset
     if progress_tracker is not None:
         progress_tracker(0.1, desc="Preprocessing data")
