@@ -38,7 +38,7 @@ def distillate(model_name, dataset_name, target_gpu, pruning, quantization, samp
     # fixme: currently saving fails for sparsed models
     # distilled_model.model.save_pretrained(OUTPUT_DIR)
 
-    return distilled_model.metrics
+    return [distilled_model.metrics, "Deploy model", "Download model", SUMMARY]
 
 
 demo = gr.Interface(
@@ -53,9 +53,9 @@ demo = gr.Interface(
     ],
     outputs=[
         gr.Dataframe(headers=["", "accuracy, %", "latency, s", "size"], row_count=3, label="Result"),
-        gr.Button("Deploy model", variant="primary"),
-        gr.Button("Download model", variant="secondary"),
-        gr.Markdown(SUMMARY)
+        gr.Button(variant="primary", visible=False),
+        gr.Button(variant="secondary", visible=False),
+        gr.Markdown()
     ],
     title="Distillery AI",
     description="A simple tool to optimize your model.",
